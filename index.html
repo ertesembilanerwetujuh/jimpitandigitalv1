@@ -1264,7 +1264,8 @@ console.log("Grup terpilih dari localStorage:", grupTerpilih);
 // Tampilkan daftar nama petugas di grup ABSENSI
 function tampilkanAbsensi() {
   grupTerpilih = localStorage.getItem("grupTerpilih") || "";
-  const namaPetugas = grupWarga[grupTerpilih] || [];
+  const grup = localStorage.getItem("grupTerpilih") || "BUKAN PETUGAS";
+  const namaPetugas = grupWarga[grup] || [];
   const grid = document.getElementById("absenGrid");
   grid.innerHTML = "";
 
@@ -1281,9 +1282,40 @@ function tampilkanAbsensi() {
   });
 }
 
+// Simpan setiap toggle perubahan ke localStorage
+namaPetugas.forEach((nama, i) => {
+  const checkbox = document.getElementById(`absen_${i}`);
+  
+  // Ambil status sebelumnya dari localStorage
+  const saved = localStorage.getItem(`absen_${grup}_${nama}`);
+  if (saved === "Hadir") checkbox.checked = true;
+  else if (saved === "Tidak Hadir") checkbox.checked = false;
+
+  // Simpan setiap kali berubah
+  checkbox.addEventListener("change", function () {
+    const status = checkbox.checked ? "Hadir" : "Tidak Hadir";
+    localStorage.setItem(`absen_${grup}_${nama}`, status);
+  });
+});
+
+// Bersihkan status yang disimpan
+namaPetugas.forEach(nama => {
+  localStorage.removeItem(`absen_${grupTerpilih}_${nama}`);
+});
+
+
+  
 // ⬇️ Tambahkan di bawah definisi fungsi tampilkanAbsensi
 // Jalankan saat halaman selesai dimuat
-document.addEventListener("DOMContentLoaded", tampilkanAbsensi);
+document.addEventListener("DOMContentLoaded", function () {
+  const sudahReset = localStorage.getItem("sudahReset");
+  const lastAbsensi = localStorage.getItem("absensiTerakhir");
+
+  if (sudahReset === "true" && lastAbsensi) {
+    tampilkanAbsensi(); // hanya panggil jika sudah login sebelumnya
+  }
+});
+
 
 
 // Kirim absensi ke Google Apps Script
@@ -1356,12 +1388,9 @@ function masukApp() {
   if (!grup || !nama) return alert("Harap pilih grup dan nama terlebih dahulu!");
 
   // Simpan absen
+  localStorage.setItem("grupTerpilih", grup);
   localStorage.setItem("absensiNama", nama);
-  localStorage.setItem("absensiGroup", grup);
   localStorage.setItem("absensiTerakhir", Date.now());
-
-  // JANGAN LUPA TAMBAH INI:
-  grupTerpilih = grup;
 
   // Isi input petugas
   document.getElementById("petugas").value = nama;
