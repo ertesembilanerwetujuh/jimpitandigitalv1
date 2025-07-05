@@ -609,6 +609,60 @@ td.edit {
     background-color: #e4a5ab;
   }
 
+
+  /* ======================================== */
+/* CSS RIWAYAT JIMPITAN */
+/* ======================================== */
+/* ============================ */
+/* HEADER RINGKASAN RIWAYAT    */
+/* ============================ */ 
+.data-row {
+  background-color: #f0f0f0; /* abu-abu terang */
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.nominal-total {
+  background-color: #eaeaea;
+  font-family: 'Poppins', sans-serif;  /* Tambahkan font Poppins */
+  font-size: 3.5rem;                   /* Sedikit lebih besar dari sebelumnya */
+  font-weight: 900;                    /* Lebih tebal */
+  text-align: center;
+  padding: 1.2rem;
+  border-radius: 15px;
+  margin: 24px 0;
+}
+
+
+#petugasSelect,
+#petugasSelect option {
+  font-style: normal !important;
+}
+
+#petugasSelect {
+  font-size: 1rem;
+  font-style: normal;
+  font-weight: bold; /* ← ini untuk label default */
+  color: #333;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+#petugasSelect option {
+  font-weight: bold; /* ← ini untuk semua opsi di dropdown */
+}
+
+
+
+
+
+
 /* ======================================== */
 /* 🎯 6. RATA KANAN KIRI UNTUK HALAMAN SARAN */
 /* ======================================== */
@@ -1118,8 +1172,7 @@ td.edit {
   }
 </style>
 
-
-<!-- Hanya muncul saat screenshot -->
+<!-- Hanya muncul saat screenshot akan dihapus -->
 <div id="headerScreenshotOnly" style="display: none; text-align: center; margin-bottom: 20px; font-size: 20px; font-weight: bold; color: #25D366;">
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="24" style="vertical-align: middle; margin-right: 8px;">
     <path fill="#25D366" d="M16 2.933A13.067 13.067 0 0 0 5.733 24.4L4 30l5.733-1.733A13.067 13.067 0 1 0 16 2.933zm0 23.467a10.4 10.4 0 0 1-5.333-1.467l-.4-.267-3.2.933.933-3.2-.267-.4A10.667 10.667 0 1 1 16 26.4zm5.867-7.867c-.267-.133-1.6-.8-1.867-.933s-.4-.133-.667.133c-.267.267-.8.933-.933 1.2-.133.267-.4.267-.667.133s-1.333-.4-2.533-1.6c-.933-.933-1.6-2-1.867-2.4s0-.533.133-.667c.133-.133.267-.4.4-.667.133-.267.133-.4 0-.667s-.667-1.6-.933-2.267c-.267-.667-.533-.6-.667-.6H10c-.267 0-.533.133-.667.267s-.8.8-.8 1.867.8 2.133.933 2.267c.133.267 1.6 3.2 4 4.4 2.8 1.6 2.8 1.067 3.333 1.067s1.6-.133 2.267-.933c.667-.8.933-1.6.933-1.867 0-.267 0-.4-.133-.4z"/>
@@ -1129,10 +1182,31 @@ td.edit {
     Paguyuban RT 09 RW 07
   </div>
 </div>
+<!-- Hanya muncul saat screenshot akan dihapus --> 
 
-    <!-- Riwayat Jimpitan -->
-  <h3>Riwayat Jimpitan</h3>
-  <div class="rekap-harian" id="rekapHari"></div>
+
+
+
+<!-- HTML RIWAYAT JIMPITAN -->
+<!-- Riwayat Jimpitan -->
+<h3>Riwayat Jimpitan</h3>
+
+<!-- HEADER RINGKASAN RIWAYAT -->
+<div class="data-row">
+  <div>Tanggal</div>
+  <div id="tanggalRiwayat">-</div>
+</div>
+<div class="data-row">
+  <div>Petugas Hadir</div>
+  <div id="jumlahPetugas">-</div>
+</div>
+<div class="nominal-total" id="totalNominal">Rp 0</div>
+
+<!-- Dropdown Petugas -->
+<select id="petugasSelect" style="font-style: italic;">
+  <option disabled selected>Yang bawa uang:</option>
+</select>
+
 
   <!-- Tidak Mengisi Jimpitan -->
   <h3 style="margin-top: 30px;">Tidak Mengisi Jimpitan</h3>
@@ -1313,6 +1387,11 @@ function simpanStatusAbsensi() {
 
   localStorage.setItem(`absenStatus_${grupTerpilih}`, JSON.stringify(status));
   console.log("Status disimpan:", status);
+
+  // ✅ Panggil ulang Riwayat
+  if (typeof tampilkanRiwayat === "function") {
+    tampilkanRiwayat();
+  }
 }
 
 // Kirim absensi ke Google Sheets via Apps Script
@@ -1351,6 +1430,12 @@ function kirimAbsensi() {
     if (spinner) spinner.style.display = "none"; // ← sembunyikan spinner
     showToast("✅ Absensi terkirim!");
     toggleAbsensi(); // Menutup panel slide
+
+  // ✅ Update tampilan Riwayat setelah kirim absensi
+  if (typeof tampilkanRiwayat === "function") {
+    tampilkanRiwayat();
+  }
+
   })
   .catch(err => {
     if (spinner) spinner.style.display = "none"; // ← sembunyikan spinner
@@ -1376,12 +1461,7 @@ function showToast(pesan) {
   }, 3000);
 }
 
-
-
 //END PENGECEKAN
-
-
-
 
 
 
@@ -1634,11 +1714,53 @@ function ubahJumlahLangsung(index, delta) {
 
 
 // ===========================
-// HALAMAN RIWAYAT
+// JS RIWAYAT JIMPITAN
 // ===========================
 function tampilkanRiwayat() {
   if (!Array.isArray(data)) return;
 
+  // Ambil tanggal terakhir dari data jimpitan
+  let tanggalTerakhir = "-";
+  if (data.length > 0) {
+    const sorted = [...data].sort((a, b) => new Date(b.timestamp || b.tanggal) - new Date(a.timestamp || a.tanggal));
+    tanggalTerakhir = sorted[0]?.tanggal || "-";
+  }
+
+  // ✅ Tampilkan tanggal di elemen #tanggal
+  const elTanggal = document.getElementById("tanggalRiwayat");
+  if (elTanggal) elTanggal.textContent = tanggalTerakhir;
+
+  // Gunakan data sesuai tanggal input terakhir
+  const dataHariIni = data.filter(d => d.tanggal === tanggalTerakhir);
+
+  // Lanjutkan semua bagian lain seperti jumlah petugas hadir, nominal, rekap harian...
+  // Menampilkan jumlah Petugas Hadir sesuai checkbox ON
+  const statusAbsen = JSON.parse(localStorage.getItem(`absenStatus_${grupTerpilih}`)) || {};
+  const jumlahHadir = Object.values(statusAbsen).filter(v => v === true).length;
+
+  const elPetugas = document.getElementById("jumlahPetugas");
+  if (elPetugas) {
+    elPetugas.textContent = `${jumlahHadir} Petugas`;
+  }
+
+  const total = dataHariIni.reduce((sum, d) => sum + (d.jumlah || 0), 0);
+  const elNominal = document.getElementById("totalNominal");
+  elNominal.textContent = total.toLocaleString("id-ID");
+
+
+  const dropdown = document.getElementById("petugasSelect");
+  if (dropdown) {
+    dropdown.innerHTML = `<option disabled selected>Yang bawa uang:</option>`;
+    const daftar = grupWarga[grupTerpilih] || [];
+    daftar.forEach(nama => {
+      const opt = document.createElement("option");
+      opt.value = nama;
+      opt.textContent = nama;
+      dropdown.appendChild(opt);
+    });
+  }
+
+  // 🔢 REKAP: Hitung total per tanggal
   const hari = {};
   data.forEach(({ tanggal, jumlah }) => {
     hari[tanggal] = (hari[tanggal] || 0) + jumlah;
@@ -1654,18 +1776,16 @@ function tampilkanRiwayat() {
           <span class="nominal">${total.toLocaleString("id-ID")}</span>
         </div>
       `).join('');
-
     rekapHari.innerHTML = isi || "<i>Belum ada data</i>";
   }
 
-  const today = new Date().toISOString().split('T')[0];
-  const dataHariIni = data.filter(d => d.tanggal === today);
-
+  // 🔢 REKAP KATEGORI: Tidak isi, Sudah, Belum
   const namaSudah = new Set(dataHariIni.map(d => d.nama));
   const namaTidakIsi = new Set(dataHariIni.filter(d => d.jumlah === 0).map(d => d.nama));
-  const namaIsi = new Set(dataHariIni.filter(d => d.jumlah > 0).map(d => d.nama));
-  const namaSemua = new Set(daftarWarga); // pastikan daftarWarga tersedia global
+  const namaSemua = new Set(daftarWarga);
   const namaBelum = [...namaSemua].filter(nama => !namaSudah.has(nama));
+
+
 
   // 🔴 TIDAK ISI
   const divTidakIsi = document.getElementById("rekapTidakIsi");
@@ -1707,6 +1827,10 @@ function tampilkanRiwayat() {
       `).join('') || "<i>Semua warga sudah dikunjungi</i>";
   }
 }
+
+
+
+
 
 // ===========================
 // 7. EKSPOR, BACKUP, KIRIM SERVER
@@ -1941,7 +2065,7 @@ function kirimSaran() {
 
 
 
-
+document.addEventListener("DOMContentLoaded", tampilkanRiwayat);
 
 
   </script>
