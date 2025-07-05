@@ -977,7 +977,7 @@ td.edit {
     <!-- Hasil pencarian -->
   <div id="hasilPencarian" style="
     margin-top: 0px;
-    margin-bottom: 16px; /* Tambahan jarak bawah */
+    margin-bottom: 8px; /* Tambahan jarak bawah */
     padding: 10px;
     border-radius: 8px;
     background: #f8f8f8;
@@ -987,12 +987,11 @@ td.edit {
   </div>
 
   <!-- Input pencarian -->
-  <input type="text" id="cariNama" placeholder="Ketik nama warga..."
-    style="width: 100%; padding: 12px; font-size: 18px; margin-bottom: 16px; border-radius: 8px; border: 1px solid #ccc;" />
-  
+  <input type="text" id="cariNama" placeholder="Ketik nama warga..." style="margin-bottom: 6px;" />
+
 
   <!-- Kontrol jumlah -->
-  <div style="position: relative; margin: 20px 0; height: 60px;">
+  <div style="position: relative; margin-top: 6px; margin-bottom: 12px; height: 60px;">
     <!-- Tombol - kiri -->
     <button class="btn-minus" onclick="ubahJumlah(-1)">−</button>
 
@@ -1231,8 +1230,11 @@ localStorage.setItem("grupTerpilih", grupDipilih);
   });
 });
 
+// ===========================
+// DAFTAR ABSENSI BARU
+// ===========================
 
-// Tambahkan di JavaScript: ABSENSI BARU
+// Event saat memilih grup & nama saat login
 document.getElementById("groupSelect").addEventListener("change", checkMasukReady);
 document.getElementById("namaSelect").addEventListener("change", checkMasukReady);
 
@@ -1240,39 +1242,31 @@ function checkMasukReady() {
   const grup = document.getElementById("groupSelect").value;
   const nama = document.getElementById("namaSelect").value;
   const tombol = document.getElementById("btnMasuk");
-
   tombol.disabled = !(grup && nama);
 }
 
-// ===========================
-// DAFTAR ABSENSI BARU
-// ===========================
-
-// Pilih Grup Saat Login
+// Ambil grup dari localStorage saat halaman dimuat
 let grupTerpilih = localStorage.getItem("grupTerpilih");
 if (!grupTerpilih || !grupWarga[grupTerpilih]) {
   grupTerpilih = "BUKAN PETUGAS";
 }
+console.log("Grup terpilih dari localStorage:", grupTerpilih);
 
- // ← ubah variabel ini secara dinamis saat user login
+// Endpoint Google Apps Script (PASTIKAN sudah di-deploy sebagai Web App, akses 'Anyone')
+const endpointAbsensi = "https://script.google.com/macros/s/AKfycbw4XBERJj1g3oDdM_AwUqnsWyTIb4Vodo7AgFYAeVPQkyPmgYElR8YYEs4orDbSPFiy/exec";
 
-// Endpoint Google Apps Script khusus absensi
-let endpointAbsensi = "https://script.google.com/macros/s/YOUR_NEW_ENDPOINT/exec";
-
-// Toggle tampil/sembunyi slide absensi
+// Tampilkan/Sembunyikan panel absensi slide
 function toggleAbsensi() {
   document.getElementById("absenPanel").classList.toggle("show");
 }
 
-console.log("Grup terpilih dari localStorage:", grupTerpilih);
-
-
-// Tampilkan daftar nama petugas di grup ABSENSI
+// ✅ Tampilkan daftar nama petugas dari grup yang dipilih
 function tampilkanAbsensi() {
   const namaPetugas = grupWarga[grupTerpilih] || [];
   const grid = document.getElementById("absenGrid");
   grid.innerHTML = "";
 
+  // Ambil status ON/OFF dari localStorage
   const statusSimpan = JSON.parse(localStorage.getItem(`absenStatus_${grupTerpilih}`)) || {};
 
   namaPetugas.forEach((nama, i) => {
@@ -1281,7 +1275,7 @@ function tampilkanAbsensi() {
       <div class="absen-item">
         <span>${nama}</span>
         <label class="switch">
-          <input type="checkbox" id="absen_${i}" onchange="simpanStatusAbsensi()" ${checked}>
+          <input type="checkbox" id="absen_${i}" ${checked} onchange="simpanStatusAbsensi()">
           <span class="slider"></span>
         </label>
       </div>
@@ -1289,13 +1283,21 @@ function tampilkanAbsensi() {
   });
 }
 
+// Simpan status kehadiran ON/OFF ke localStorage
+function simpanStatusAbsensi() {
+  const namaPetugas = grupWarga[grupTerpilih] || [];
+  const status = {};
 
-// ⬇️ Tambahkan di bawah definisi fungsi tampilkanAbsensi
-// Jalankan saat halaman selesai dimuat
-document.addEventListener("DOMContentLoaded", tampilkanAbsensi);
+  namaPetugas.forEach((nama, i) => {
+    const hadir = document.getElementById(`absen_${i}`).checked;
+    status[nama] = hadir;
+  });
 
+  localStorage.setItem(`absenStatus_${grupTerpilih}`, JSON.stringify(status));
+  console.log("Status disimpan:", status);
+}
 
-// Kirim absensi ke Google Apps Script
+// Kirim absensi ke Google Sheets via Apps Script
 function kirimAbsensi() {
   const waktu = new Date().toLocaleString("id-ID");
   const namaPetugas = grupWarga[grupTerpilih] || [];
@@ -1305,7 +1307,11 @@ function kirimAbsensi() {
     return [waktu, grupTerpilih, nama, hadir];
   });
 
-  fetch('https://script.google.com/macros/s/AKfycbzHz90ktEBhT_-Q18VqXotgKWLIjKH2vWQgNSBwE1RkmCeX6DUYh-JXiQSaqTrbgGvh/exec', {
+  // Simpan status dulu
+  simpanStatusAbsensi();
+
+  // Kirim data ke Google Apps Script
+  fetch(endpointAbsensi, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ absensi: data })
@@ -1313,13 +1319,21 @@ function kirimAbsensi() {
   .then(res => res.text())
   .then(msg => {
     alert("✅ Absensi berhasil dikirim!");
-    toggleAbsensi(); // Sembunyikan panel
+    toggleAbsensi();
   })
   .catch(err => {
-    console.error(err);
+    console.error("❌ Gagal mengirim absensi:", err);
     alert("❌ Gagal mengirim absensi.");
   });
 }
+
+// Saat halaman dimuat, tampilkan data absensi
+document.addEventListener("DOMContentLoaded", tampilkanAbsensi);
+
+//END PENGECEKAN
+
+
+
 
 function simpanStatusAbsensi() {
   const namaPetugas = grupWarga[grupTerpilih] || [];
@@ -1405,16 +1419,27 @@ document.addEventListener("DOMContentLoaded", function () {
   const sudahReset = localStorage.getItem("sudahReset");
   const tombol = document.getElementById("btnMasuk");
 
-  // Cek apakah absen terakhir kurang dari 5 jam lalu dan sudah reset
+  const grup = localStorage.getItem("grupTerpilih");
+  const nama = localStorage.getItem("absensiNama");
+
   if (lastAbsensi && now - parseInt(lastAbsensi) < 5 * 60 * 60 * 1000 && sudahReset === "true") {
+    // Sembunyikan overlay login
     document.getElementById("absensiOverlay").style.display = "none";
-    const petugas = localStorage.getItem("absensiNama");
-    if (petugas) document.getElementById("petugas").value = petugas;
+
+    // Isi input nama petugas
+    if (nama) document.getElementById("petugas").value = nama;
+
+    // ✅ tampilkan ulang daftar absensi sesuai grup terakhir
+    if (grup && grupWarga[grup]) {
+      grupTerpilih = grup;  // Update variabel global
+      tampilkanAbsensi();
+    }
   } else {
     tombol.disabled = true;
     tombol.classList.remove("glow");
   }
 });
+
 
 
 
