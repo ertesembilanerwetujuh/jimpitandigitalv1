@@ -1295,7 +1295,7 @@ function kirimAbsensi() {
     return [waktu, grupTerpilih, nama, hadir];
   });
 
-  fetch('https://script.google.com/macros/s/AKfycbw73ZAlOJ7fDkSaI6B5HKSPOTN3HIXcUAS621LmrmfEjUsBcqNhUw8wNXv_a0L7cb6L/exec', {
+  fetch('https://script.google.com/macros/s/AKfycbzHz90ktEBhT_-Q18VqXotgKWLIjKH2vWQgNSBwE1RkmCeX6DUYh-JXiQSaqTrbgGvh/exec', {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ absensi: data })
