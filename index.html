@@ -1247,7 +1247,7 @@ function checkMasukReady() {
 // ===========================
 
 // Pilih Grup Saat Login
-let grupTerpilih = localStorage.getItem("grupTerpilih") || "grupTerpilih";
+let grupTerpilih = localStorage.getItem("grupTerpilih") || "";
  // ← ubah variabel ini secara dinamis saat user login
 
 // Endpoint Google Apps Script khusus absensi
@@ -1263,6 +1263,7 @@ console.log("Grup terpilih dari localStorage:", grupTerpilih);
 
 // Tampilkan daftar nama petugas di grup ABSENSI
 function tampilkanAbsensi() {
+  grupTerpilih = localStorage.getItem("grupTerpilih") || "";
   const namaPetugas = grupWarga[grupTerpilih] || [];
   const grid = document.getElementById("absenGrid");
   grid.innerHTML = "";
