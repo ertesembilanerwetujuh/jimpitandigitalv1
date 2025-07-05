@@ -221,7 +221,7 @@ header img { height: 40px; }
   border-top-right-radius: 14px;
   border-bottom-left-radius: 14px;
   border-bottom-right-radius: 14px;
-  max-height: calc(100vh - 130px); /* sisakan tinggi header + tab menu */
+  max-height: calc(100vh - 120px); /* sisakan tinggi header + tab menu */
   overflow-y: auto;
 }
 
@@ -873,6 +873,8 @@ td.edit {
   padding: 14px 24px;
   border-radius: 8px;
   font-size: 16px;
+  min-width: 220px;  /* ⬅️ Lebar minimal agar muat 1 baris di HP */
+  max-width: 90vw;   /* ⬅️ Agar tetap responsif di layar kecil */
   box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   z-index: 9999;
   transition: opacity 0.3s ease;
