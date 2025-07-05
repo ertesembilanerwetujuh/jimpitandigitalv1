@@ -319,8 +319,6 @@ input:checked + .slider:before {
 }
 
 
-
-
 /* ============================== */
 /* 5. FORM INPUT, SELECT, BUTTON */
 /* ============================== */
@@ -772,6 +770,7 @@ td.edit {
 </style>
 
 
+
 </div>
 
 
@@ -861,7 +860,24 @@ td.edit {
   <button onclick="kirimAbsensi()">Kirim Absensi</button>
 </div>
 
-
+<!-- ======================= -->
+<!-- Kirim Absensi Toast -->
+<!-- ======================= -->
+<div id="toast" style="
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #4CAF50;
+  color: white;
+  padding: 14px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  z-index: 9999;
+  transition: opacity 0.3s ease;
+  display: none;
+"></div>
 
 
 
@@ -1253,7 +1269,7 @@ if (!grupTerpilih || !grupWarga[grupTerpilih]) {
 console.log("Grup terpilih dari localStorage:", grupTerpilih);
 
 // Endpoint Google Apps Script (PASTIKAN sudah di-deploy sebagai Web App, akses 'Anyone')
-const endpointAbsensi = "https://script.google.com/macros/s/AKfycbw4XBERJj1g3oDdM_AwUqnsWyTIb4Vodo7AgFYAeVPQkyPmgYElR8YYEs4orDbSPFiy/exec";
+const endpointAbsensi = "https://script.google.com/macros/s/AKfycbyapuLBQylQ-9ocSvHZWwusPjtrde0MkGdenqX3CkLx8UBea5NlZBL-LYZTY4khtI2j/exec";
 
 // Tampilkan/Sembunyikan panel absensi slide
 function toggleAbsensi() {
@@ -1304,33 +1320,65 @@ function kirimAbsensi() {
 
   const data = namaPetugas.map((nama, i) => {
     const hadir = document.getElementById(`absen_${i}`).checked ? "Hadir" : "Tidak Hadir";
-    return [waktu, grupTerpilih, nama, hadir];
+    return {
+      waktu: waktu,
+      grup: grupTerpilih,
+      nama: nama,
+      status: hadir
+    };
   });
 
-  // Simpan status dulu
+  // Simpan status ke localStorage
   simpanStatusAbsensi();
 
-  // Kirim data ke Google Apps Script
-  fetch(endpointAbsensi, {
+  // Tampilkan spinner jika ada
+  const spinner = document.getElementById("spinner");
+  if (spinner) spinner.style.display = "flex";
+
+  // Kirim pakai format seperti jimpitan
+  fetch("https://script.google.com/macros/s/AKfycbxw7BK3L5wnAiJTojjglZKR9GeFea1J9G9z4-TTk81XRkqA0Z_vN-aISnUH1CZUYy4m/exec", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ absensi: data })
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8"
+    },
+    body: JSON.stringify(data),
+    redirect: 'follow'
   })
-  .then(res => res.text())
+  // ⬇️ BAGIAN INILAH YANG KAMU TANYAKAN:
   .then(msg => {
-    alert("✅ Absensi berhasil dikirim!");
-    toggleAbsensi();
+    if (spinner) spinner.style.display = "none"; // ← sembunyikan spinner
+    showToast("✅ Absensi terkirim!");
+    toggleAbsensi(); // Menutup panel slide
   })
   .catch(err => {
-    console.error("❌ Gagal mengirim absensi:", err);
-    alert("❌ Gagal mengirim absensi.");
+    if (spinner) spinner.style.display = "none"; // ← sembunyikan spinner
+    console.error("❌ Gagal mengirim:", err);
+    showToast("❌ Gagal mengirim.");
   });
 }
 
 // Saat halaman dimuat, tampilkan data absensi
 document.addEventListener("DOMContentLoaded", tampilkanAbsensi);
 
+
+
+function showToast(pesan) {
+  const toast = document.getElementById("toast");
+  toast.textContent = pesan;
+  toast.style.display = "block";
+  toast.style.opacity = "1";
+
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    setTimeout(() => toast.style.display = "none", 300);
+  }, 3000);
+}
+
+
+
 //END PENGECEKAN
+
+
 
 
 
