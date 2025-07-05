@@ -219,13 +219,15 @@ header img { height: 40px; }
   z-index: 1000;
   border-top-left-radius: 14px;
   border-top-right-radius: 14px;
+  border-bottom-left-radius: 14px;
+  border-bottom-right-radius: 14px;
   max-height: calc(100vh - 120px); /* sisakan tinggi header + tab menu */
   overflow-y: auto;
 }
 
 /* Saat panel tampil */
 .absen-slide.show {
-  bottom: 102px; /* agar menutupi tab menu tapi tidak sampai ke header */
+  bottom: 55px; /* Sama seperti height: 50px di #absenHandle */
 }
 
 /* ============================== */
@@ -1247,7 +1249,11 @@ function checkMasukReady() {
 // ===========================
 
 // Pilih Grup Saat Login
-let grupTerpilih = localStorage.getItem("grupTerpilih") || "";
+let grupTerpilih = localStorage.getItem("grupTerpilih");
+if (!grupTerpilih || !grupWarga[grupTerpilih]) {
+  grupTerpilih = "BUKAN PETUGAS";
+}
+
  // ← ubah variabel ini secara dinamis saat user login
 
 // Endpoint Google Apps Script khusus absensi
@@ -1263,18 +1269,19 @@ console.log("Grup terpilih dari localStorage:", grupTerpilih);
 
 // Tampilkan daftar nama petugas di grup ABSENSI
 function tampilkanAbsensi() {
-  grupTerpilih = localStorage.getItem("grupTerpilih") || "";
-  const grup = localStorage.getItem("grupTerpilih") || "BUKAN PETUGAS";
-  const namaPetugas = grupWarga[grup] || [];
+  const namaPetugas = grupWarga[grupTerpilih] || [];
   const grid = document.getElementById("absenGrid");
   grid.innerHTML = "";
 
+  const statusSimpan = JSON.parse(localStorage.getItem(`absenStatus_${grupTerpilih}`)) || {};
+
   namaPetugas.forEach((nama, i) => {
+    const checked = statusSimpan[nama] ? "checked" : "";
     grid.innerHTML += `
       <div class="absen-item">
         <span>${nama}</span>
         <label class="switch">
-          <input type="checkbox" id="absen_${i}">
+          <input type="checkbox" id="absen_${i}" onchange="simpanStatusAbsensi()" ${checked}>
           <span class="slider"></span>
         </label>
       </div>
@@ -1282,40 +1289,10 @@ function tampilkanAbsensi() {
   });
 }
 
-// Simpan setiap toggle perubahan ke localStorage
-namaPetugas.forEach((nama, i) => {
-  const checkbox = document.getElementById(`absen_${i}`);
-  
-  // Ambil status sebelumnya dari localStorage
-  const saved = localStorage.getItem(`absen_${grup}_${nama}`);
-  if (saved === "Hadir") checkbox.checked = true;
-  else if (saved === "Tidak Hadir") checkbox.checked = false;
 
-  // Simpan setiap kali berubah
-  checkbox.addEventListener("change", function () {
-    const status = checkbox.checked ? "Hadir" : "Tidak Hadir";
-    localStorage.setItem(`absen_${grup}_${nama}`, status);
-  });
-});
-
-// Bersihkan status yang disimpan
-namaPetugas.forEach(nama => {
-  localStorage.removeItem(`absen_${grupTerpilih}_${nama}`);
-});
-
-
-  
 // ⬇️ Tambahkan di bawah definisi fungsi tampilkanAbsensi
 // Jalankan saat halaman selesai dimuat
-document.addEventListener("DOMContentLoaded", function () {
-  const sudahReset = localStorage.getItem("sudahReset");
-  const lastAbsensi = localStorage.getItem("absensiTerakhir");
-
-  if (sudahReset === "true" && lastAbsensi) {
-    tampilkanAbsensi(); // hanya panggil jika sudah login sebelumnya
-  }
-});
-
+document.addEventListener("DOMContentLoaded", tampilkanAbsensi);
 
 
 // Kirim absensi ke Google Apps Script
@@ -1344,6 +1321,20 @@ function kirimAbsensi() {
   });
 }
 
+function simpanStatusAbsensi() {
+  const namaPetugas = grupWarga[grupTerpilih] || [];
+  const status = {};
+
+  namaPetugas.forEach((nama, i) => {
+    const hadir = document.getElementById(`absen_${i}`).checked;
+    status[nama] = hadir;
+  });
+
+  localStorage.setItem(`absenStatus_${grupTerpilih}`, JSON.stringify(status));
+}
+
+console.log("Status disimpan:", localStorage.getItem(`absenStatus_${grupTerpilih}`));
+
 
 // ===========================
 // ABSENSI OVERLAY & RESET
@@ -1357,6 +1348,9 @@ function handleResetFromAbsen() {
   if (konfirmasi === "RESET SEMUA") {
     // Kosongkan data (jika pakai array data)
     localStorage.clear(); // Bersihkan semua data sebelumnya
+    
+    // 🔥 Hapus juga status absensi petugas yang tersimpan
+    localStorage.removeItem(`absenStatus_${localStorage.getItem("grupTerpilih")}`);
     alert("✅ Semua data berhasil direset, silahkan masuk.");
 
     // Tandai sudah reset
@@ -1388,9 +1382,13 @@ function masukApp() {
   if (!grup || !nama) return alert("Harap pilih grup dan nama terlebih dahulu!");
 
   // Simpan absen
-  localStorage.setItem("grupTerpilih", grup);
   localStorage.setItem("absensiNama", nama);
+  localStorage.setItem("absensiGroup", grup);
   localStorage.setItem("absensiTerakhir", Date.now());
+
+  // 🔁 Ini penting untuk absensi slide:
+  localStorage.setItem("grupTerpilih", grup);
+  grupTerpilih = grup; // ← ini juga wajib untuk JS aktif saat ini
 
   // Isi input petugas
   document.getElementById("petugas").value = nama;
@@ -1398,7 +1396,6 @@ function masukApp() {
   // Sembunyikan overlay absensi
   document.getElementById("absensiOverlay").style.display = "none";
   tampilkanAbsensi(); // ← penting!
-
 }
 
 // Saat halaman dimuat
